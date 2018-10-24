@@ -3,10 +3,32 @@
 
 import socket
 import pickle
+import os
+import sys
+sys.path.append("EduBot/EduBotLibrary")
+import edubot
 
-IP = '127.0.0.1'
+
+#IP = "127.0.0.1"
+IP = str(os.popen("hostname -I | cut -d\" \" -f1").readline().replace("\n",""))
 PORT = 8000
 TIMEOUT = 60 #время ожидания приема сообщения
+
+def motorRun(leftSpeed, rightSpeed):
+    robot.leftmotor.SetSpeed(leftSpeed)
+    robot.rightmotor.SetSpeed(rightSpeed)
+
+def beep():
+    print("Beep!!!")
+    robot.Beep()
+def Exit():
+    print("exit")
+    running = False
+
+robot = edubot.EduBot(1)
+assert robot.Check(), 'EduBot not found!!!'
+robot.Start() #обязательная процедура, запуск потока отправляющего на контроллер EduBot онлайн сообщений
+print ('EduBot started!!!')
 
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #создаем сервер
 server.bind((IP, PORT)) #запускаем сервер
@@ -21,21 +43,29 @@ while running:
     except socket.timeout: #если вышло время, то выходим из цикла
         print("Time is out...")
         break
-      
-    cmd, param = pickle.loads(data[0]) #распаковываем полученное сообщение 
+    
+    if data:
+        msg = "message recieved"
+        server.sendto(msg.encode("utf-8"), adrs) #отправляем ответ (msg)
+        
+    cmd, param = pickle.loads(data[0]) #распаковываем полученное сообщение
+    leftSpeed, rightSpeed = param
     adrs = data[1] #адрес, с которого было отправлено сообщение
 
     print(cmd, param, adrs)
 
-    if(cmd == 'speed'):
-        leftSpeed, rightSpeed = param
-        print('leftSpeed: %d, rightSpeed: %d' % (leftSpeed, rightSpeed))
-    elif(cmd == 'beep'):
-        print('Beep!!!')
-    else:
-        print('Unknown command: %s' % cmd)
+    if(cmd == "speed"):
+        print("leftSpeed: %d, rightSpeed: %d" % (leftSpeed, rightSpeed))
+        motorRun(leftSpeed, rightSpeed)
+    elif(cmd == "beep"):
+        beep()
+    elif cmd == "exit":
+        Exit()
+    elif:
+        print("Unknown command: %s" % cmd)
         
-    #msg = 'Ok'
-    #server.sendto(msg.encode('utf-8'), adrs) #отправляем ответ (msg)
-        
+    
+motorRun(0, 0)
+robot.Release()
 server.close()
+print("End program")
